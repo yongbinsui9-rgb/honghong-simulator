@@ -173,8 +173,8 @@ export default function HomePage() {
             AI 聊天模拟器
           </span>
           <h1 className="text-[52px] leading-[1.05] font-bold tracking-[-0.015em] sm:text-[64px] md:text-[72px]">
-            哄哄
-            <span className="bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] bg-clip-text text-transparent">
+            <span className="text-sky-500 dark:text-sky-400">哄哄</span>
+            <span className="bg-gradient-to-r from-sky-500 to-cyan-400 bg-clip-text text-transparent">
               模拟器
             </span>
           </h1>
