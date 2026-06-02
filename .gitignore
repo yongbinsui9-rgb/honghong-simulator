@@ -160,3 +160,7 @@ Desktop.ini
 # Misc
 .coze-logs
 .preview
+
+# 备份归档
+*.tar.gz
+*.tar
