@@ -91,9 +91,13 @@ export default function HomePage() {
         body: JSON.stringify({ role: selectedRole }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "生成场景失败");
       sessionStorage.setItem("honghong_scenario", JSON.stringify(data.scenario));
       sessionStorage.setItem("honghong_role", selectedRole);
-      sessionStorage.setItem("honghong_anger", String(data.initialAnger));
+      sessionStorage.setItem(
+        "honghong_anger",
+        String(typeof data.initialAnger === "number" ? data.initialAnger : 100)
+      );
       router.push("/chat");
     } catch {
       sessionStorage.setItem("honghong_role", selectedRole);

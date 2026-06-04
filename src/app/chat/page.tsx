@@ -17,6 +17,12 @@ interface Scenario {
   story: string;
 }
 
+function clampAnger(value: unknown, fallback = 100): number {
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const [role, setRole] = useState<"girlfriend" | "boyfriend" | null>(null);
@@ -174,7 +180,7 @@ export default function ChatPage() {
         } catch {
           // sessionStorage 数据损坏，忽略
         }
-        if (savedAnger) setAnger(Number(savedAnger));
+        if (savedAnger) setAnger(clampAnger(savedAnger));
         setSceneLoading(false);
       } else {
         try {
@@ -245,7 +251,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: chatHistory,
-          currentAnger: anger,
+          currentAnger: clampAnger(anger),
           role,
           scenario,
           difficulty,
@@ -278,14 +284,18 @@ export default function ChatPage() {
             try {
               const data = JSON.parse(dataStr);
               if (data.change !== undefined) {
-                angerThisRound = Math.max(0, Math.min(100, anger + data.change));
-                setAnger(angerThisRound);
-                setLastAnger(angerThisRound);
+                const change = Number(data.change);
+                if (Number.isFinite(change)) {
+                  angerThisRound = clampAnger(angerThisRound + change);
+                  setAnger(angerThisRound);
+                  setLastAnger(angerThisRound);
+                }
               } else if (data.text !== undefined) {
                 fullText += data.text;
                 setStreamingText(fullText);
               } else if (data.anger !== undefined) {
-                const finalAnger = data.anger;
+                const finalAnger = clampAnger(data.anger);
+                setAnger(finalAnger);
                 if (finalAnger <= 0) {
                   setShowVictory(true);
                 } else if (finalAnger >= 100) {

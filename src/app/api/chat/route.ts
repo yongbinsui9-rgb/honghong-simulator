@@ -137,6 +137,7 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
               const angerMatch = fullContent.match(/\[ANGER:([+-]?\d+)\]/);
               if (angerMatch) {
                 angerChange = parseInt(angerMatch[1], 10);
+                if (!Number.isFinite(angerChange)) angerChange = -10;
                 // 发送怒气值 SSE 事件
                 const angerData = JSON.stringify({ change: angerChange });
                 controller.enqueue(
@@ -181,14 +182,16 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
         }
 
         // 发送完成事件，附带当前怒气值
-        const newAnger = Math.max(
-          0,
-          Math.min(100, currentAnger + (angerChange || -10))
-        );
+        const baseAnger = Number.isFinite(Number(currentAnger))
+          ? Number(currentAnger)
+          : 100;
+        const change = Number.isFinite(Number(angerChange)) ? Number(angerChange) : -10;
+        const newAnger = Math.max(0, Math.min(100, baseAnger + change));
         const doneData = JSON.stringify({ anger: newAnger });
         controller.enqueue(encoder.encode(`event: done\ndata: ${doneData}\n\n`));
         controller.close();
       } catch (error) {
+        console.error("Chat LLM error:", error);
         const errorData = JSON.stringify({
           error: "AI 回复失败，请重试",
         });
