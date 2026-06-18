@@ -4,9 +4,16 @@ import { isNotNull } from "drizzle-orm";
 import { getDatabase } from "@/storage/database/db";
 import { users } from "@/storage/database/shared/schema";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const appUrl = process.env.APP_URL || "http://localhost:5000";
+
+let resendClient: Resend | null = null;
+
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  if (!resendClient) resendClient = new Resend(apiKey);
+  return resendClient;
+}
 
 async function generateLoveLetter(userName: string): Promise<string> {
   const config = new Config();
@@ -46,6 +53,12 @@ export async function sendWelcomeEmail(
   userEmail: string,
   userName: string
 ) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn("RESEND_API_KEY not set, skipping welcome email");
+    return;
+  }
+
   await resend.emails.send({
     from: "哄哄模拟器 <onboarding@resend.dev>",
     to: userEmail,
@@ -67,6 +80,12 @@ export async function sendDailyLoveLetter(
   userEmail: string,
   userName: string
 ) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn("RESEND_API_KEY not set, skipping daily love letter");
+    return;
+  }
+
   const loveLetter = await generateLoveLetter(userName);
 
   await resend.emails.send({
