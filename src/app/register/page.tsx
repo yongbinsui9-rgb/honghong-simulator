@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useRef, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Heart } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const turnstileRef = useRef<{ reset: () => void } | null>(null);
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const requiresTurnstile = Boolean(turnstileSiteKey);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,18 +29,25 @@ export default function RegisterPage() {
       return;
     }
 
+    if (requiresTurnstile && !turnstileToken) {
+      setError("请完成人机验证");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, email, password, turnstileToken }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
         setError(data.error || "注册失败");
         return;
       }
@@ -56,7 +70,6 @@ export default function RegisterPage() {
       </Link>
 
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex items-center gap-2 justify-center mb-2">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ff6b6b] to-[#ee5a24] flex items-center justify-center shadow-lg">
             <Heart className="w-5 h-5 text-white" fill="white" />
@@ -83,6 +96,20 @@ export default function RegisterPage() {
               required
               minLength={2}
               maxLength={50}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-1.5">
+              邮箱
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="用于接收欢迎邮件"
+              className="w-full px-4 py-3 rounded-xl border border-[#d2d2d7] dark:border-[#38383a] bg-white dark:bg-[#1c1c1e] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder:text-[#86868b] text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b6b]/30 focus:border-[#ff6b6b] transition-all"
+              required
             />
           </div>
 
@@ -115,13 +142,25 @@ export default function RegisterPage() {
             />
           </div>
 
+          {turnstileSiteKey && (
+            <div className="flex justify-center">
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                onSuccess={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
+              />
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-red-500 text-center">{error}</p>
           )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (requiresTurnstile && !turnstileToken)}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ff6b6b] to-[#ee5a24] text-white font-medium text-sm hover:opacity-90 transition-all disabled:opacity-50 active:scale-[0.98]"
           >
             {loading ? "注册中..." : "注册"}

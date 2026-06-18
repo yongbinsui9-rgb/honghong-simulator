@@ -10,11 +10,17 @@ interface Message {
   content: string;
   audioUri?: string;
   audioLoading?: boolean;
+  imageUrl?: string;
+  imageLoading?: boolean;
 }
 
 interface Scenario {
   title: string;
   story: string;
+}
+
+function stripPhotoMarker(text: string): string {
+  return text.replace(/\[PHOTO:[^\]]+\]/g, "").trim();
 }
 
 function clampAnger(value: unknown, fallback = 100): number {
@@ -40,6 +46,7 @@ export default function ChatPage() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [voiceId, setVoiceId] = useState<string>("");
   const [difficulty, setDifficulty] = useState<string>("");
+  const [imageGenerating, setImageGenerating] = useState(false);
 
   const difficultyLabel: Record<string, string> = {
     easy: "简单 😊",
@@ -267,6 +274,8 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let fullText = "";
       let angerThisRound = anger;
+      let pendingImageUrl: string | null = null;
+      let currentEvent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -276,26 +285,35 @@ export default function ChatPage() {
         const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (line.startsWith("event: anger") || line.startsWith("event: text") || line.startsWith("event: done") || line.startsWith("event: error")) {
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
             continue;
           }
+
           if (line.startsWith("data: ")) {
             const dataStr = line.slice(6);
             try {
               const data = JSON.parse(dataStr);
-              if (data.change !== undefined) {
+
+              if (currentEvent === "anger" || data.change !== undefined) {
                 const change = Number(data.change);
                 if (Number.isFinite(change)) {
                   angerThisRound = clampAnger(angerThisRound + change);
                   setAnger(angerThisRound);
                   setLastAnger(angerThisRound);
                 }
-              } else if (data.text !== undefined) {
+              } else if (currentEvent === "text" || data.text !== undefined) {
                 fullText += data.text;
-                setStreamingText(fullText);
-              } else if (data.anger !== undefined) {
+                setStreamingText(stripPhotoMarker(fullText));
+              } else if (currentEvent === "status" && data.status === "generating_image") {
+                setImageGenerating(true);
+              } else if (currentEvent === "done" || data.anger !== undefined) {
                 const finalAnger = clampAnger(data.anger);
                 setAnger(finalAnger);
+                if (data.imageUrl) {
+                  pendingImageUrl = data.imageUrl;
+                }
+                setImageGenerating(false);
                 if (finalAnger <= 0) {
                   setShowVictory(true);
                 } else if (finalAnger >= 100) {
@@ -312,22 +330,26 @@ export default function ChatPage() {
         scrollToBottom();
       }
 
-      if (fullText) {
+      const displayText = stripPhotoMarker(fullText);
+      if (displayText || pendingImageUrl) {
         const newMsgId = (Date.now() + 1).toString();
         const aiMessage: Message = {
           id: newMsgId,
           role: "assistant",
-          content: fullText,
-          audioLoading: true,
+          content: displayText,
+          audioLoading: Boolean(displayText),
+          imageUrl: pendingImageUrl || undefined,
         };
         setMessages((prev) => [...prev, aiMessage]);
 
-        // 触发 TTS 语音生成（异步）
-        generateAudio(newMsgId, fullText, angerThisRound);
+        if (displayText) {
+          generateAudio(newMsgId, displayText, angerThisRound);
+        }
       }
 
       setStreamingText("");
       setAiTyping(false);
+      setImageGenerating(false);
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("Chat error:", err);
@@ -481,7 +503,7 @@ export default function ChatPage() {
           </p>
           {messages.length === 0 && (
             <p className="mt-2 text-[11px] text-pink-400 dark:text-pink-300">
-              💡 说点什么来哄哄 Ta 吧...
+              💡 说点什么来哄哄 Ta 吧…也可以试试「发张自拍给我看看」
             </p>
           )}
         </div>
@@ -504,15 +526,31 @@ export default function ChatPage() {
               </div>
             )}
             <div className="max-w-[75%]">
-              <div
-                className={`whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-relaxed ${
-                  msg.role === "user"
-                    ? "bubble-self bg-[#95ec69] text-neutral-800"
-                    : "bubble-other bg-white text-neutral-800 shadow-sm dark:bg-neutral-800 dark:text-neutral-200"
-                }`}
-              >
-                {msg.content}
-              </div>
+              {msg.content && (
+                <div
+                  className={`whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-relaxed ${
+                    msg.role === "user"
+                      ? "bubble-self bg-[#95ec69] text-neutral-800"
+                      : "bubble-other bg-white text-neutral-800 shadow-sm dark:bg-neutral-800 dark:text-neutral-200"
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              )}
+              {msg.imageUrl && (
+                <div
+                  className={`mt-1 overflow-hidden rounded-lg ${
+                    msg.role === "user" ? "bubble-self" : "bubble-other shadow-sm"
+                  }`}
+                >
+                  <img
+                    src={msg.imageUrl}
+                    alt="聊天图片"
+                    className="max-h-64 max-w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              )}
               {/* 语音播放按钮（仅 AI 消息） */}
               {msg.role === "assistant" && (
                 <div className="mt-1 flex items-center gap-1">
@@ -556,7 +594,23 @@ export default function ChatPage() {
           </div>
         )}
 
-        {aiTyping && !streamingText && (
+        {imageGenerating && (
+          <div className="mb-3 flex justify-start">
+            <div className="mr-2 mt-1 h-9 w-9 shrink-0 overflow-hidden rounded-sm">
+              <img
+                src={avatarSrc}
+                alt={characterLabel}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-xs text-neutral-500 shadow-sm dark:bg-neutral-800">
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-neutral-400 border-t-transparent" />
+              正在发照片...
+            </div>
+          </div>
+        )}
+
+        {aiTyping && !streamingText && !imageGenerating && (
           <div className="mb-3 flex justify-start">
             <div className="mr-2 mt-1 h-9 w-9 shrink-0 overflow-hidden rounded-sm">
               <img

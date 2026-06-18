@@ -3,16 +3,52 @@ import { eq } from "drizzle-orm";
 import { getDatabase } from "@/storage/database/db";
 import { users } from "@/storage/database/shared/schema";
 import { hashPassword, signToken } from "@/lib/auth";
+import { sendWelcomeEmail } from "@/lib/email";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, email, turnstileToken } = await request.json();
 
-    if (!username || !password) {
+    if (!username || !password || !email) {
       return NextResponse.json(
-        { error: "用户名和密码不能为空" },
+        { error: "用户名、邮箱和密码不能为空" },
         { status: 400 }
       );
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { error: "邮箱格式不正确" },
+        { status: 400 }
+      );
+    }
+
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { error: "请完成人机验证" },
+          { status: 400 }
+        );
+      }
+
+      const remoteIp =
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        request.headers.get("x-real-ip") ||
+        undefined;
+
+      const verifyResult = await verifyTurnstileToken(
+        turnstileToken,
+        remoteIp
+      );
+
+      if (!verifyResult.success) {
+        console.error("Turnstile verify failed:", verifyResult.errorCodes);
+        return NextResponse.json(
+          { error: "人机验证失败，请重试" },
+          { status: 403 }
+        );
+      }
     }
 
     if (username.length < 2 || username.length > 50) {
@@ -50,6 +86,7 @@ export async function POST(request: NextRequest) {
       .insert(users)
       .values({
         username,
+        email,
         password: hashedPassword,
       })
       .returning({ id: users.id, username: users.username });
@@ -59,6 +96,12 @@ export async function POST(request: NextRequest) {
         { error: "注册失败，请重试" },
         { status: 500 }
       );
+    }
+
+    try {
+      await sendWelcomeEmail(email, username);
+    } catch (err) {
+      console.error("Welcome email failed:", err);
     }
 
     const token = signToken({ userId: newUser.id, username: newUser.username });

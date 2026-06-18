@@ -1,9 +1,26 @@
 import { NextRequest } from "next/server";
 import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
+import { verifyToken } from "@/lib/auth";
+import {
+  extractPhotoDescription,
+  generateScenePhoto,
+  stripPhotoMarker,
+} from "@/lib/scene-photo";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+function getUserIdFromRequest(request: NextRequest): number | null {
+  const token = request.cookies.get("token")?.value;
+  if (!token) return null;
+
+  try {
+    return verifyToken(token).userId;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -104,7 +121,21 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
 - 对方敷衍：[ANGER:+10]就打这几个字？你写作文都没这么敷衍过吧
 - 对方狡辩：[ANGER:+20]哇塞，你这理由编得比你工资条还好看呢
 - 对方说了让你暖心的话：[ANGER:-30]……你认真起来还挺要命的，好了好了不气了不气了
-- 对方说错话：[ANGER:+15]行，你成功让我从生气变成了想打人`;
+- 对方说错话：[ANGER:+15]行，你成功让我从生气变成了想打人
+
+===== 发照片功能 =====
+当用户明确要求看照片、自拍、截图、发张图等时，你可以像真实微信聊天一样发照片：
+- 怒气值 80+：多数时候拒绝，或只发一张很敷衍/很冷的图（比如黑屏、天花板、背影）
+- 怒气值 50-80：可以发，但照片内容要符合当前情绪和场景（冷脸、侧脸、故意拍丑等）
+- 怒气值 50 以下：更愿意发，照片可以更温柔、可爱、撒娇
+
+如果要发照片，在回复**最后一行**加上标记（用户看不到这行）：
+[PHOTO:具体图片描述，包含人物、场景、物品、表情、动作，要结合当前生气场景]
+如果不发照片，不要加此标记。
+
+示例：
+[ANGER:-15]行行行，给你看，别再说我不理你了
+[PHOTO:女生在卧室镜子前自拍，穿着居家卫衣，表情有点委屈，背景有乱糟糟的床和化妆台]`;
 
   const llmMessages: Message[] = [
     { role: "system", content: systemPrompt },
@@ -112,6 +143,14 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
   ];
 
   const encoder = new TextEncoder();
+
+  function sanitizeStreamText(text: string): string {
+    return text
+      .replace(/\[PHOTO:[^\]]+\]/g, "")
+      .replace(/\[PHOTO:[^\]]*$/g, "")
+      .trimEnd();
+  }
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -146,7 +185,9 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
                 angerEventSent = true;
 
                 // 移除标记后的纯文本部分
-                const afterMarker = fullContent.split(/\[ANGER:[+-]?\d+\]/)[1] || "";
+                const afterMarker = sanitizeStreamText(
+                  fullContent.split(/\[ANGER:[+-]?\d+\]/)[1] || ""
+                );
                 if (afterMarker) {
                   const textData = JSON.stringify({ text: afterMarker });
                   controller.enqueue(
@@ -158,7 +199,9 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
             }
 
             if (angerEventSent) {
-              const textData = JSON.stringify({ text });
+              const cleaned = sanitizeStreamText(text);
+              if (!cleaned) continue;
+              const textData = JSON.stringify({ text: cleaned });
               controller.enqueue(
                 encoder.encode(`event: text\ndata: ${textData}\n\n`)
               );
@@ -174,7 +217,9 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
             encoder.encode(`event: anger\ndata: ${fallbackData}\n\n`)
           );
           if (fullContent) {
-            const textData = JSON.stringify({ text: fullContent });
+            const textData = JSON.stringify({
+              text: sanitizeStreamText(stripPhotoMarker(fullContent)),
+            });
             controller.enqueue(
               encoder.encode(`event: text\ndata: ${textData}\n\n`)
             );
@@ -187,7 +232,31 @@ ${scenario?.story || `${characterLabel}现在很生气。`}
           : 100;
         const change = Number.isFinite(Number(angerChange)) ? Number(angerChange) : -10;
         const newAnger = Math.max(0, Math.min(100, baseAnger + change));
-        const doneData = JSON.stringify({ anger: newAnger });
+
+        let imageUrl: string | null = null;
+        const photoDescription = extractPhotoDescription(fullContent);
+        if (photoDescription && role) {
+          controller.enqueue(
+            encoder.encode(
+              `event: status\ndata: ${JSON.stringify({ status: "generating_image" })}\n\n`
+            )
+          );
+
+          try {
+            imageUrl = await generateScenePhoto({
+              description: photoDescription,
+              role,
+              scenario,
+              currentAnger: newAnger,
+              requestHeaders: request.headers,
+              userId: getUserIdFromRequest(request),
+            });
+          } catch (photoError) {
+            console.error("Scene photo error:", photoError);
+          }
+        }
+
+        const doneData = JSON.stringify({ anger: newAnger, imageUrl });
         controller.enqueue(encoder.encode(`event: done\ndata: ${doneData}\n\n`));
         controller.close();
       } catch (error) {
