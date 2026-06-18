@@ -105,19 +105,40 @@ export async function sendDailyLoveLetter(
   });
 }
 
-export async function sendDailyLoveLetterToAll() {
+export async function sendDailyLoveLetterToAll(): Promise<{
+  total: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+}> {
   const db = await getDatabase();
   const subscribers = await db
     .select({ email: users.email, username: users.username })
     .from(users)
     .where(isNotNull(users.email));
 
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
   for (const user of subscribers) {
-    if (!user.email) continue;
+    if (!user.email) {
+      skipped++;
+      continue;
+    }
     try {
       await sendDailyLoveLetter(user.email, user.username);
+      sent++;
     } catch (err) {
+      failed++;
       console.error(`Daily love letter failed for ${user.email}:`, err);
     }
   }
+
+  return {
+    total: subscribers.length,
+    sent,
+    failed,
+    skipped,
+  };
 }
