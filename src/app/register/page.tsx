@@ -15,7 +15,7 @@ export default function RegisterPage() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const requiresTurnstile = Boolean(turnstileSiteKey);
