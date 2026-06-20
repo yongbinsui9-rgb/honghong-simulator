@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Footer } from "@/components/Footer";
 import { ArrowLeft, Heart, Loader2 } from "lucide-react";
 
 interface Article {
@@ -129,14 +130,7 @@ export default function ArticleDetailPage() {
         </div>
       </article>
 
-      {/* 页脚 */}
-      <footer className="border-t border-gray-200/60 dark:border-gray-800/60 py-8 mt-8">
-        <div className="max-w-[980px] mx-auto px-6 text-center">
-          <p className="text-[12px] text-[#86868b]">
-            © 2026 哄哄模拟器 · 用理解和幽默经营每一段关系
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Footer } from "@/components/Footer";
 import { useRouter } from "next/navigation";
 import {
   Heart, Volume2, Sparkles, Zap, Skull,
@@ -441,26 +442,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ========== Footer ========== */}
-      <footer className="border-t border-[#d2d2d7] px-6 py-10 dark:border-[#38383a]">
-        <div className="mx-auto flex max-w-[980px] flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/logo-icon.jpeg" alt="" className="h-5 w-5 rounded object-cover" />
-            <span className="text-[13px] font-medium text-[#86868b]">哄哄模拟器</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <Link
-              href="/blog"
-              className="text-[12px] text-[#86868b] transition-colors hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
-            >
-              恋爱攻略
-            </Link>
-            <span className="text-[12px] text-[#86868b]">
-              支持男生哄女朋友 · 也支持女生哄男朋友
-            </span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
