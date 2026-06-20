@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
-import { ArrowLeft, BookOpen, Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface Article {
   id: number;
@@ -61,27 +61,8 @@ export default function BlogListPage() {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] dark:bg-black">
-      {/* 顶部导航 */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60">
-        <div className="max-w-[980px] mx-auto px-6 h-14 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-[#1d1d1f] dark:text-[#f5f5f7] hover:opacity-70 transition-opacity"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[13px] font-medium tracking-tight">返回首页</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-[#ff6b6b]" />
-            <span className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-              恋爱攻略
-            </span>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-[980px] mx-auto px-6 py-16">
+    <div className="min-h-dvh bg-[#f5f5f7] pt-14 dark:bg-black">
+      <main className="mx-auto max-w-[980px] px-6 py-16">
         {/* 头部 */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ff6b6b]/10 dark:bg-[#ff6b6b]/20 text-[#ff6b6b] text-[12px] font-medium mb-6">

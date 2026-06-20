@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
-import { ArrowLeft, Heart, Loader2 } from "lucide-react";
+import { Heart, Loader2 } from "lucide-react";
 
 interface Article {
   id: number;
@@ -61,27 +61,8 @@ export default function ArticleDetailPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] dark:bg-black">
-      {/* 顶部导航 */}
-      <nav className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-gray-800/60">
-        <div className="max-w-[680px] mx-auto px-6 h-14 flex items-center justify-between">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#1d1d1f] dark:text-[#f5f5f7] hover:opacity-70 transition-opacity"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[13px] font-medium tracking-tight">返回</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <Heart className="w-4 h-4 text-[#ff6b6b]" />
-            <span className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-              恋爱攻略
-            </span>
-          </div>
-        </div>
-      </nav>
-
-      <article className="max-w-[680px] mx-auto px-6 py-16">
+    <div className="min-h-dvh bg-[#f5f5f7] pt-14 dark:bg-black">
+      <article className="mx-auto max-w-[680px] px-6 py-16">
         {/* 文章头部 */}
         <header className="mb-10">
           <div className="flex items-center gap-2 text-[12px] text-[#86868b] mb-4">

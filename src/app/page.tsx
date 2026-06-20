@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { useRouter } from "next/navigation";
 import {
@@ -8,7 +7,7 @@ import {
   MessageCircle, Brain, ChevronRight, Phone,
   ArrowDown
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const VOICE_OPTIONS = {
   girlfriend: [
@@ -60,23 +59,6 @@ export default function HomePage() {
   const [selectedVoice, setSelectedVoice] = useState<string>("");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
-
-  // 检查登录状态
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(() => {});
-  }, []);
-
-  // 登出
-  const handleLogout = async () => {
-    document.cookie = "token=; path=/; max-age=0";
-    setUser(null);
-  };
 
   const handleStart = async () => {
     if (!selectedRole || !selectedVoice || !selectedDifficulty) return;
@@ -112,64 +94,8 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#f5f5f7] text-[#1d1d1f] dark:bg-black dark:text-[#f5f5f7]">
-      {/* ========== Fixed Nav ========== */}
-      <nav className="fixed left-0 right-0 top-0 z-50 flex h-12 items-center justify-between border-b border-black/5 bg-[#f5f5f7]/80 px-6 backdrop-blur-xl dark:border-white/5 dark:bg-black/80 sm:px-10">
-        <div className="flex items-center gap-2.5">
-          <img src="/logo-icon.jpeg" alt="" className="h-6 w-6 rounded-lg object-cover" />
-          <span className="text-sm font-semibold tracking-tight">哄哄模拟器</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/blog"
-            className="hidden text-[13px] font-medium text-[#86868b] transition-colors hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] sm:block"
-          >
-            恋爱攻略
-          </Link>
-          <Link
-            href="/leaderboard"
-            className="hidden text-[13px] font-medium text-[#86868b] transition-colors hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] sm:block"
-          >
-            排行榜
-          </Link>
-          {user ? (
-            <>
-              <span className="text-[13px] text-[#86868b]">
-                👋 {user.username}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="text-[13px] font-medium text-[#86868b] transition-colors hover:text-red-500"
-              >
-                退出
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="text-[13px] font-medium text-[#86868b] transition-colors hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
-              >
-                登录
-              </Link>
-              <Link
-                href="/register"
-                className="text-[13px] font-medium text-[#86868b] transition-colors hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
-              >
-                注册
-              </Link>
-            </>
-          )}
-          <button
-            onClick={scrollToStart}
-            className="rounded-full bg-[#1d1d1f] px-4 py-1.5 text-[13px] font-medium text-white transition-all hover:opacity-85 dark:bg-white dark:text-[#1d1d1f]"
-          >
-            开始体验
-          </button>
-        </div>
-      </nav>
-
       {/* ========== Hero Section ========== */}
-      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-16 sm:px-10">
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-14 sm:px-10">
         {/* Background gradient */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#fce4ec]/60 via-[#f5f5f7] to-[#f5f5f7] dark:from-[#2d1b2e]/40 dark:via-black dark:to-black" />
 

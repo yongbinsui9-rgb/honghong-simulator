@@ -61,14 +61,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f5f5f7] dark:bg-black flex flex-col items-center justify-center px-6">
-      <Link
-        href="/"
-        className="absolute top-6 left-6 text-sm text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors"
-      >
-        ← 返回首页
-      </Link>
-
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-[#f5f5f7] px-6 pt-14 dark:bg-black">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 justify-center mb-2">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#ff6b6b] to-[#ee5a24] flex items-center justify-center shadow-lg">

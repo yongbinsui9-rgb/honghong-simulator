@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inspector } from 'react-dev-inspector';
+import { NavbarWrapper } from '@/components/NavbarWrapper';
 import { TawkTo } from '@/components/TawkTo';
 import './globals.css';
 
@@ -19,6 +20,7 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className={`antialiased`}>
         {isDev && <Inspector />}
+        <NavbarWrapper />
         {children}
         <TawkTo />
       </body>
